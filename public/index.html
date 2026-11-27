@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Progressive Helix (hx) keystroke drills and a guided tutorial for people who mostly edit Markdown, YAML and config files. Runs in the browser.">
+<meta property="og:title" content="Helix Reps">
+<meta property="og:description" content="Progressive Helix (hx) keystroke drills and a guided tutorial for people who mostly edit Markdown, YAML and config files. Runs in the browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hxreps.puddingtime.net/">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Helix Reps</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: stage ladder on the left, one drill card on the right; the buffer is the hero. Palette borrows Helix's own default theme. */
+:root{
+  --bg:#f4f0f8; --panel:#ffffff; --panel2:#ebe4f3; --fg:#2a1838; --muted:#6d5f7d; --line:#d8cde4;
+  --accent:#5b2d91; --accent-fg:#ffffff; --sel:#dccbf2; --cur:#5b2d91; --cur-fg:#ffffff; --cur2:#9a7bc4;
+  --star:#a86a00; --ok:#1f7a45; --evil:#b83a26;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#281733; --panel:#3b224c; --panel2:#452859; --fg:#eadff5; --muted:#b3a3c7; --line:#5a3d6e;
+  --accent:#b9b5f5; --accent-fg:#281733; --sel:#6b3fa6; --cur:#dbbfef; --cur-fg:#281733; --cur2:#a4a0e8;
+  --star:#efba5d; --ok:#9ff28f; --evil:#f79a8d; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#281733; --panel:#3b224c; --panel2:#452859; --fg:#eadff5; --muted:#b3a3c7; --line:#5a3d6e;
+  --accent:#b9b5f5; --accent-fg:#281733; --sel:#6b3fa6; --cur:#dbbfef; --cur-fg:#281733; --cur2:#a4a0e8;
+  --star:#efba5d; --ok:#9ff28f; --evil:#f79a8d; color-scheme:dark }
+
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:20px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,#card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+kbd{font-family:var(--mono);font-size:.86em;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap}
+
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em}
+.sub{margin:2px 0 0;color:var(--muted)}
+.stats{display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums}
+.stats b{font-weight:600}
+.stats .st{color:var(--star)}
+.modes{display:flex;gap:6px}
+.modes button{background:transparent;border:1px solid var(--line);border-radius:6px;padding:6px 14px}
+.modes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+
+.grid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:800px){.grid{grid-template-columns:minmax(0,1fr)}}
+#stages{display:flex;flex-direction:column;gap:6px}
+.stage{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid transparent;border-radius:8px}
+.stage.on{background:var(--panel);border-color:var(--line)}
+.stage.locked{opacity:.5}
+.stage-h{display:flex;justify-content:space-between;gap:8px;background:none;border:0;padding:0;text-align:left;font-weight:500;width:100%}
+.stage-h span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:400}
+.dots{display:flex;flex-wrap:wrap;gap:4px}
+.dot{width:18px;height:18px;border-radius:4px;border:1px solid var(--line);background:transparent;padding:0;font-size:10px;line-height:16px;color:var(--star)}
+.dot.s1,.dot.s2,.dot.s3{background:var(--panel2)}
+.dot.here{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.lockmsg{font-size:12px;color:var(--muted)}
+
+#card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.eyebrow{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.task{font-size:20px;font-weight:500;margin:0;text-wrap:balance}
+.chips{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px}
+.chip{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chip.vim .lab{color:var(--muted)}
+.chip.hx .lab{color:var(--ok);font-weight:600}
+.link.doc{margin-left:auto;font-size:13px}
+.next .link.doc{margin-left:0}
+.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.panes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.panes{grid-template-columns:minmax(0,1fr)}}
+.pane{min-width:0;display:flex;flex-direction:column;gap:6px}
+.pane h3{margin:0;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.buf{font-family:var(--mono);font-size:17px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px 14px;overflow-x:auto;min-height:5.2em}
+.buf .ln{white-space:pre}
+.buf span.sel{background:var(--sel)}
+.buf span.cur{background:var(--cur);color:var(--cur-fg)}
+.buf span.cur2{background:var(--cur2);color:var(--cur-fg)}
+.buf span.ibar{box-shadow:inset 2px 0 0 var(--cur)}
+.buf.goal{opacity:.92}
+.statusline{font-family:var(--mono);font-size:13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.modetag{background:var(--accent);color:var(--accent-fg);padding:0 8px;border-radius:3px;font-weight:600}
+.statusline .pend{color:var(--accent);min-width:3ch}
+.statusline .right{margin-left:auto;color:var(--muted)}
+.statusline .over{color:var(--evil)}
+.tape{display:flex;flex-wrap:wrap;gap:4px;min-height:26px;align-items:center}
+.tape .none{color:var(--muted);font-size:13px}
+.recall{font-family:var(--mono);font-size:22px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:26px 14px;text-align:center;min-height:1.6em;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.recall .none{color:var(--muted);font-size:15px;font-family:var(--sans)}
+.recall.miss{border-color:var(--evil)}
+.result{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+.result .stars{color:var(--star);font-size:20px;letter-spacing:2px}
+.result .head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-variant-numeric:tabular-nums}
+.result .why{margin:0;max-width:65ch}
+.result .next{color:var(--muted);font-size:13px}
+.flash{color:var(--ok);font-size:13px;min-height:1.5em}
+.focus-hint{font-size:13px;color:var(--evil)}
+#card:focus .focus-hint,#card:focus-within .focus-hint{visibility:hidden}
+.say{max-width:68ch;font-size:16px}
+.say p{margin:0 0 .6em}
+.say p:last-child{margin-bottom:0}
+.say code{font-family:var(--mono);background:var(--sel);padding:0 4px;border-radius:3px}
+.say.after{border-left:3px solid var(--ok);padding-left:12px}
+.say .tw{overflow-x:auto;margin-top:10px}
+.say table{border-collapse:collapse;font-size:14px}
+.say th,.say td{text-align:left;padding:5px 18px 5px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.say th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.mn{margin:0;max-width:65ch}
+.mn b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-right:6px}
+.prompt{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.prompt .lab{color:var(--muted);font-size:13px;margin-right:4px}
+.prompt kbd{font-size:15px;padding:3px 9px}
+.prompt kbd.hit{opacity:.45}
+.prompt kbd.nextk{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.prompt .misskey{color:var(--evil);font-size:13px;margin-left:6px}
+.stage .ok{color:var(--ok)}
+.big{font-size:40px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+footer{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+footer .sp{margin-left:auto;display:flex;gap:14px}
+@media (prefers-reduced-motion:no-preference){.result{animation:pop .18s ease-out}@keyframes pop{from{transform:translateY(4px);opacity:.4}to{transform:none;opacity:1}}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Helix Reps</h1>
+      <p class="sub">Helix practice for people who mostly edit Markdown, with some YAML and config files. Needs a hardware keyboard.</p>
+    </div>
+    <div class="stats"><span id="rank"></span><span class="st" id="starcount"></span></div>
+  </header>
+  <div class="modes">
+    <button id="mTut" aria-pressed="false">Tutorial</button>
+    <button id="mLadder" aria-pressed="true">Ladder</button>
+    <button id="mSprint" aria-pressed="false">Sprint · 60s</button>
+  </div>
+  <div class="grid">
+    <nav id="stages" aria-label="Stages"></nav>
+    <div class="col">
+    <main id="card" tabindex="0" aria-label="Drill"></main>
+    </div>
+  </div>
+  <footer>
+    <span><kbd>Tab</kbd> retry / skip</span><span><kbd>Enter</kbd> next, once solved</span><span><kbd>Ctrl-[</kbd> also works as Esc</span><span>Bindings follow the default keymap in the <a class="link" href="https://docs.helix-editor.com/keymap.html" target="_blank" rel="noopener">Helix docs</a>. Not affiliated with the Helix project.</span>
+    <span class="sp"><button class="link" id="unlock"></button><button class="link" id="wipe">Reset progress</button></span>
+  </footer>
+</div>
+
+<script>
+/*ENGINE-START*/
+const ML='⟦', MR='⟧';
+function parse(src){let text='',sels=[],open=-1;for(const ch of src){if(ch===ML)open=text.length;else if(ch===MR)sels.push([open,text.length-1]);else text+=ch;}if(!text.endsWith('\n'))text+='\n';return{text,sels};}
+const rng=s=>[Math.min(s.a,s.h),Math.max(s.a,s.h)];
+const pt=p=>({a:p,h:p});
+function lineStart(t,i){return i<=0?0:t.lastIndexOf('\n',i-1)+1;}
+function lineEnd(t,i){return t.indexOf('\n',i);}
+function cat(c,big){if(c===undefined||c==='\n')return'n';if(c===' '||c==='\t')return's';if(big)return'w';return /\w/.test(c)?'w':'p';}
+function newState(text,sels,primary){return{text,sels:sels.map(([a,h])=>({a,h})),primary:primary||0,mode:'normal',pending:null,pcount:0,count:'',reg:[],search:null,lastFind:null,undo:[],redo:[],prompt:null,ins:null,keys:0};}
+function norm(S){
+  if(!S.text.endsWith('\n'))S.text+='\n';
+  const n=S.text.length,cl=x=>Math.max(0,Math.min(n-1,x));
+  const prim=S.sels[S.primary]||S.sels[0];
+  const arr=S.sels.map(s=>({a:cl(s.a),h:cl(s.h),p:s===prim}));
+  arr.sort((x,y)=>Math.min(x.a,x.h)-Math.min(y.a,y.h));
+  const out=[];
+  for(const s of arr){const last=out[out.length-1];
+    if(last&&Math.min(s.a,s.h)<=Math.max(last.a,last.h)){const lo=Math.min(last.a,last.h),hi=Math.max(last.a,last.h,s.a,s.h),fwd=last.h>=last.a;last.a=fwd?lo:hi;last.h=fwd?hi:lo;last.p=last.p||s.p;}
+    else out.push(s);}
+  S.primary=Math.max(0,out.findIndex(s=>s.p));S.sels=out.map(({a,h})=>({a,h}));
+}
+function snap(S){S.undo.push({text:S.text,sels:S.sels.map(s=>({...s})),primary:S.primary});S.redo=[];}
+function applyEdits(S,eds){let out='',last=0;const pos=[];for(const e of eds){out+=S.text.slice(last,e.from);pos.push(out.length);out+=e.text;last=e.to;}out+=S.text.slice(last);S.text=out;return pos;}
+function mapPos(p,eds){let d=0;for(const e of eds){if(p>=e.to)d+=e.text.length-(e.to-e.from);else if(p>=e.from)return e.from+d;else break;}return p+d;}
+function remap(S,eds){const old=S.sels;applyEdits(S,eds);S.sels=old.map(s=>({a:mapPos(s.a,eds),h:mapPos(s.h,eds)}));norm(S);}
+function mv(S,fn,n){const ext=S.mode==='select';for(let c=0;c<(n||1);c++)S.sels=S.sels.map(s=>{const r=fn(s.h,s);if(!r)return s;return ext?{a:s.a,h:r.h}:r;});norm(S);}
+function wNext(t,pos,big,end){const n=t.length;let p=pos;
+  if(p+1<n&&cat(t[p],big)!==cat(t[p+1],big))p++;
+  while(p<n&&t[p]==='\n')p++;
+  if(p>=n)return null;
+  let h=p;
+  while(h+1<n){const a=cat(t[h],big),b=cat(t[h+1],big);if(a!==b&&(end?a!=='s':b!=='s'))break;h++;}
+  return{a:p,h};}
+function wPrev(t,pos,big){let p=pos;
+  if(p-1>=0&&cat(t[p],big)!==cat(t[p-1],big))p--;
+  while(p>=0&&t[p]==='\n')p--;
+  if(p<0)return null;
+  let h=p;
+  while(h-1>=0){const a=cat(t[h-1],big),b=cat(t[h],big);if(a!==b&&b!=='s')break;h--;}
+  return{a:p,h};}
+function vmove(t,p,d){const ls=lineStart(t,p),col=p-ls;let nls;
+  if(d>0){const le=lineEnd(t,p);if(le+1>=t.length)return p;nls=le+1;}else{if(ls===0)return p;nls=lineStart(t,ls-1);}
+  const nle=lineEnd(t,nls);return nls+Math.min(col,Math.max(0,nle-nls-1));}
+function findCh(t,pos,ch,kind,cnt){const fwd=kind==='f'||kind==='t',till=kind==='t'||kind==='T';let idx;
+  if(fwd){idx=t.indexOf(ch,pos+(till?2:1));for(let c=1;c<cnt&&idx>=0;c++)idx=t.indexOf(ch,idx+1);if(idx<0)return null;return{a:pos,h:till?idx-1:idx};}
+  const st=pos-(till?2:1);if(st<0)return null;idx=t.lastIndexOf(ch,st);for(let c=1;c<cnt&&idx>0;c++)idx=t.lastIndexOf(ch,idx-1);if(idx<0)return null;return{a:pos,h:till?idx+1:idx};}
+const PAIRS={'(':'()',')':'()','[':'[]',']':'[]','{':'{}','}':'{}','<':'<>','>':'<>'};
+const OBJ='()[]{}<>"\'`';
+function pairOf(ch){const p=PAIRS[ch];return p?[p[0],p[1]]:[ch,ch];}
+function matchFwd(t,o,op,cl){let d=0;for(let i=o;i<t.length;i++){if(t[i]===op)d++;else if(t[i]===cl){d--;if(d===0)return i;}}return-1;}
+function matchBack(t,c,op,cl){let d=0;for(let i=c;i>=0;i--){if(t[i]===cl)d++;else if(t[i]===op){d--;if(d===0)return i;}}return-1;}
+function findPair(t,pos,ch){const[op,cl]=pairOf(ch);
+  if(op===cl){const ls=lineStart(t,pos);let cnt=0;for(let i=ls;i<pos;i++)if(t[i]===op)cnt++;let o,c;
+    if(t[pos]===op){if(cnt%2===0){o=pos;c=t.indexOf(op,pos+1);}else{c=pos;o=t.lastIndexOf(op,pos-1);}}
+    else{o=pos>0?t.lastIndexOf(op,pos-1):-1;c=t.indexOf(op,pos+1);}
+    if(o<0||c<0||o<ls)return null;return[o,c];}
+  let o=-1;
+  if(t[pos]===op)o=pos;else if(t[pos]===cl)o=matchBack(t,pos,op,cl);
+  else{let d=0;for(let i=pos-1;i>=0;i--){if(t[i]===cl)d++;else if(t[i]===op){if(d===0){o=i;break;}d--;}}}
+  if(o<0)return null;const c=matchFwd(t,o,op,cl);return c<0?null:[o,c];}
+function del(S,yank){snap(S);const rs=S.sels.map(rng);if(yank)S.reg=rs.map(([lo,hi])=>S.text.slice(lo,hi+1));
+  const pos=applyEdits(S,rs.map(([lo,hi])=>({from:lo,to:hi+1,text:''})));S.sels=pos.map(pt);S.primary=Math.min(S.primary,S.sels.length-1);S.mode='normal';norm(S);}
+function enterInsert(S,ps,append){S.sels=ps.map(pt);S.mode='insert';S.ins={append};norm(S);}
+function paste(S,before,replace){if(!S.reg.length)return;snap(S);const t=S.text;const vals=[];
+  const eds=S.sels.map((s,i)=>{const[lo,hi]=rng(s);const v=S.reg[Math.min(i,S.reg.length-1)];vals.push(v);
+    if(replace)return{from:lo,to:hi+1,text:v};const lw=v.endsWith('\n');
+    const at=before?(lw?lineStart(t,lo):lo):(lw?lineEnd(t,hi)+1:hi+1);return{from:at,to:at,text:v};});
+  const pos=applyEdits(S,eds);S.sels=pos.map((p,i)=>({a:p,h:p+Math.max(1,vals[i].length)-1}));S.mode='normal';norm(S);}
+function selLines(S,count,grow){const t=S.text,n=t.length;S.sels=S.sels.map(s=>{const[lo,hi]=rng(s);const ls=lineStart(t,lo);let le=lineEnd(t,hi);
+  let extra=grow?(lo===ls&&hi===le?count:count-1):0;while(extra-->0&&le+1<n)le=lineEnd(t,le+1);return{a:ls,h:le};});norm(S);}
+function caseOp(S,fn){snap(S);const eds=S.sels.map(s=>{const[lo,hi]=rng(s);return{from:lo,to:hi+1,text:fn(S.text.slice(lo,hi+1))};});const old=S.sels;applyEdits(S,eds);S.sels=old;norm(S);}
+function indent(S,dir){snap(S);const t=S.text,starts=new Set();
+  for(const s of S.sels){const[lo,hi]=rng(s);let ls=lineStart(t,lo);while(ls<=hi&&ls<t.length){starts.add(ls);ls=lineEnd(t,ls)+1;}}
+  const eds=[...starts].sort((a,b)=>a-b).map(ls=>{if(dir>0)return t[ls]==='\n'?null:{from:ls,to:ls,text:'  '};let k=0;while(k<2&&t[ls+k]===' ')k++;return k?{from:ls,to:ls+k,text:''}:null;}).filter(Boolean);
+  remap(S,eds);}
+function copyDown(S){const t=S.text,add=[];
+  for(const s of S.sels){const[lo,hi]=rng(s);const ls=lineStart(t,lo);if(lineStart(t,hi)!==ls)continue;const ca=s.a-ls,ch=s.h-ls,need=Math.max(ca,ch);let le=lineEnd(t,lo);
+    while(le+1<t.length){const nls=le+1,nle=lineEnd(t,nls);if(nle-nls>need){add.push({a:nls+ca,h:nls+ch});break;}le=nle;}}
+  if(add.length){S.sels=S.sels.concat(add);S.primary=S.sels.length-1;norm(S);}}
+function splitLines(S){const t=S.text,out=[];
+  for(const s of S.sels){const[lo,hi]=rng(s);let st=lo;for(let i=lo;i<=hi;i++)if(t[i]==='\n'){if(i>st)out.push({a:st,h:i-1});st=i+1;}if(st<=hi)out.push({a:st,h:hi});}
+  if(out.length){S.sels=out;S.primary=0;norm(S);}}
+function textObj(S,kind,ch){const t=S.text;
+  S.sels=S.sels.map(s=>{let r=null;
+    if(ch==='w'||ch==='W'){const big=ch==='W',c=cat(t[s.h],big);if(c==='n')return s;let lo=s.h,hi=s.h;
+      while(lo>0&&cat(t[lo-1],big)===c)lo--;while(cat(t[hi+1],big)===c)hi++;
+      if(kind==='a'){let e=hi;while(t[e+1]===' ')e++;if(e>hi)hi=e;else while(lo>0&&t[lo-1]===' ')lo--;}
+      r=[lo,hi];}
+    else if(ch==='p'){const blank=ls=>t[ls]==='\n';const ls=lineStart(t,s.h);if(blank(ls))return s;let top=ls;
+      while(top>0&&!blank(lineStart(t,top-1)))top=lineStart(t,top-1);
+      let end=lineEnd(t,ls);while(end+1<t.length&&!blank(end+1))end=lineEnd(t,end+1);
+      if(kind==='a')while(end+1<t.length&&blank(end+1))end++;
+      r=[top,end];}
+    else if(ch.length===1&&!/[A-Za-z0-9\s]/.test(ch)){const pr=findPair(t,s.h,ch);if(!pr)return s;r=kind==='a'?pr:(pr[1]-pr[0]>1?[pr[0]+1,pr[1]-1]:null);if(!r)return s;}
+    else return s;
+    return{a:r[0],h:r[1]};});norm(S);}
+function toggleComment(S){const t=S.text,starts=[],seen=new Set();
+  for(const s of S.sels){const[lo,hi]=rng(s);let ls=lineStart(t,lo);while(ls<=hi&&ls<t.length){if(!seen.has(ls)&&t[ls]!=='\n'){seen.add(ls);starts.push(ls);}ls=lineEnd(t,ls)+1;}}
+  if(!starts.length)return;starts.sort((a,b)=>a-b);snap(S);
+  const ind=ls=>{let q=ls;while(t[q]===' '||t[q]==='\t')q++;return q;};
+  let eds;
+  if(starts.every(ls=>t[ind(ls)]==='#'))eds=starts.map(ls=>{const q=ind(ls);return{from:q,to:q+(t[q+1]===' '?2:1),text:''};});
+  else{const m=Math.min(...starts.map(ls=>ind(ls)-ls));eds=starts.map(ls=>({from:ls+m,to:ls+m,text:'# '}));}
+  remap(S,eds);}
+function incr(S,d){const t=S.text,eds=[];
+  for(const s of S.sels){const[lo,hi]=rng(s);let a=-1;for(let i=lo;i<=hi;i++)if(/\d/.test(t[i])){a=i;break;}if(a<0)continue;
+    let b=a;while(a>0&&/\d/.test(t[a-1]))a--;while(/\d/.test(t[b+1]||''))b++;
+    eds.push({from:a,to:b+1,text:String(parseInt(t.slice(a,b+1),10)+d)});}
+  if(!eds.length)return;snap(S);remap(S,eds);}
+function joinLines(S){snap(S);let t=S.text;const sels=S.sels.map(s=>({...s}));
+  for(let i=sels.length-1;i>=0;i--){const[lo,hi]=rng(sels[i]);let n=0;for(let p=lo;p<hi;p++)if(t[p]==='\n')n++;n=Math.max(1,n);let le=lineEnd(t,lo);
+    while(n-->0&&le<t.length-1){let k=le+1;while(t[k]===' '||t[k]==='\t')k++;const rp=t[k]==='\n'?'':' ',delta=rp.length-(k-le);
+      t=t.slice(0,le)+rp+t.slice(k);
+      for(let j=i;j<sels.length;j++)for(const key of['a','h']){if(sels[j][key]>=k)sels[j][key]+=delta;else if(sels[j][key]>le)sels[j][key]=le;}
+      le=lineEnd(t,le);}}
+  S.text=t;S.sels=sels;norm(S);}
+function matchBracket(S){const t=S.text;mv(S,h=>{const ch=t[h];let tgt=-1;
+  if(PAIRS[ch]){const pr=findPair(t,h,ch);if(pr)tgt=h===pr[0]?pr[1]:pr[0];}
+  else{let best=null;for(const o of'([{<'){const pr=findPair(t,h,o);if(pr&&(!best||pr[0]>best[0]))best=pr;}if(best)tgt=best[1];}
+  return tgt<0?null:pt(tgt);});}
+function surround(S,ch){if(ch.length!==1)return;snap(S);const[o,c]=pairOf(ch),eds=[];
+  for(const s of S.sels){const[lo,hi]=rng(s);eds.push({from:lo,to:lo,text:o},{from:hi+1,to:hi+1,text:c});}
+  const pos=applyEdits(S,eds);S.sels=S.sels.map((s,i)=>({a:pos[2*i],h:pos[2*i+1]}));norm(S);}
+function surroundEdit(S,ch,to){const t=S.text,at=new Map();
+  for(const s of S.sels){const pr=findPair(t,s.h,ch);if(!pr)continue;const np=to?pairOf(to):['',''];at.set(pr[0],np[0]);at.set(pr[1],np[1]);}
+  if(!at.size)return;snap(S);remap(S,[...at.keys()].sort((a,b)=>a-b).map(p=>({from:p,to:p+1,text:at.get(p)})));}
+function search(S,dir){if(!S.search)return;let re;try{re=new RegExp(S.search,'g');}catch(e){return;}
+  const ms=[];let m;while((m=re.exec(S.text))){if(!m[0].length){re.lastIndex++;continue;}ms.push([m.index,m.index+m[0].length-1]);}
+  if(!ms.length)return;const[lo,hi]=rng(S.sels[S.primary]);
+  const pick=dir>0?(ms.find(x=>x[0]>hi)||ms[0]):([...ms].reverse().find(x=>x[1]<lo)||ms[ms.length-1]);
+  const ns={a:pick[0],h:pick[1]};
+  if(S.mode==='select'){S.sels.push(ns);S.primary=S.sels.length-1;}else S.sels[S.primary]=ns;norm(S);}
+function feedPrompt(S,k){const P=S.prompt;
+  if(k==='Esc'){S.prompt=null;return;}
+  if(k==='Backspace'){P.buf=P.buf.slice(0,-1);return;}
+  if(k==='Space'){P.buf+=' ';return;}
+  if(k.length===1){P.buf+=k;return;}
+  if(k!=='Enter')return;
+  S.prompt=null;if(!P.buf)return;
+  if(P.kind==='/'){S.search=P.buf;search(S,1);return;}
+  if(P.kind==='s'){let re;try{re=new RegExp(P.buf,'g');}catch(e){return;}const out=[];
+    for(const s of S.sels){const[lo,hi]=rng(s);const sub=S.text.slice(lo,hi+1);let m;re.lastIndex=0;
+      while((m=re.exec(sub))){if(!m[0].length){re.lastIndex++;continue;}out.push({a:lo+m.index,h:lo+m.index+m[0].length-1});}}
+    if(out.length){S.sels=out;S.primary=0;norm(S);}}
+}
+function feedInsert(S,k){
+  if(k==='Esc'){const ap=S.ins.append;S.sels=S.sels.map(s=>{let p=s.h;if(ap&&p>lineStart(S.text,p))p--;return pt(p);});S.mode='normal';S.ins=null;norm(S);return;}
+  const ch=k==='Space'?' ':k==='Enter'?'\n':k.length===1?k:null;
+  if(ch!==null){const pos=applyEdits(S,S.sels.map(s=>({from:s.h,to:s.h,text:ch})));S.sels=pos.map(p=>pt(p+1));norm(S);}
+  else if(k==='Backspace'){const pos=applyEdits(S,S.sels.map(s=>({from:Math.max(0,s.h-1),to:s.h,text:''})));S.sels=pos.map(pt);norm(S);}
+}
+function feedPending(S,k){const p=S.pending,n=S.pcount;S.pending=null;
+  if(k==='Esc')return;
+  const ch=k==='Space'?' ':k==='Enter'?'\n':k;const t=S.text;
+  if(p==='g'){
+    if(k==='h')mv(S,h=>pt(lineStart(t,h)));
+    else if(k==='l')mv(S,h=>{const ls=lineStart(t,h),le=lineEnd(t,h);return pt(le>ls?le-1:le);});
+    else if(k==='s')mv(S,h=>{let q=lineStart(t,h);while(t[q]===' '||t[q]==='\t')q++;return pt(q);});
+    else if(k==='g')mv(S,()=>{let q=0;for(let i=1;i<n;i++){const le=lineEnd(t,q);if(le+1>=t.length)break;q=le+1;}return pt(q);});
+    else if(k==='e')mv(S,()=>pt(lineStart(t,t.length-1)));
+  }else if(p==='m'){if(k==='m')matchBracket(S);else if('iasrd'.includes(k))S.pending='m'+k;}
+  else if(p==='mi'||p==='ma')textObj(S,p[1],ch);
+  else if(p==='ms')surround(S,ch);
+  else if(p==='md'){if(ch.length===1)surroundEdit(S,ch,null);}
+  else if(p==='mr'){if(ch.length===1)S.pending='mr:'+ch;}
+  else if(p.startsWith('mr:')){if(ch.length===1)surroundEdit(S,p[3],ch);}
+  else if('ftFT'.includes(p)){if(ch.length===1){S.lastFind=[ch,p];mv(S,h=>findCh(S.text,h,ch,p,n||1));}}
+  else if(p==='r'){if(ch.length===1&&ch!=='\n')caseOp(S,x=>x.replace(/[^\n]/g,()=>ch));}
+}
+function feed(S,k){
+  S.keys++;
+  if(S.prompt)return feedPrompt(S,k);
+  if(S.mode==='insert')return feedInsert(S,k);
+  if(S.pending!==null)return feedPending(S,k);
+  if(/^[1-9]$/.test(k)||(k==='0'&&S.count)){S.count+=k;return;}
+  const had=!!S.count,n=had?Math.min(parseInt(S.count,10),99):1;S.count='';
+  const t=S.text,len=t.length;
+  switch(k){
+    case'h':mv(S,h=>pt(Math.max(0,h-1)),n);break;
+    case'l':mv(S,h=>pt(Math.min(len-1,h+1)),n);break;
+    case'j':mv(S,h=>pt(vmove(S.text,h,1)),n);break;
+    case'k':mv(S,h=>pt(vmove(S.text,h,-1)),n);break;
+    case'w':case'W':mv(S,h=>wNext(S.text,h,k==='W',false),n);break;
+    case'e':case'E':mv(S,h=>wNext(S.text,h,k==='E',true),n);break;
+    case'b':case'B':mv(S,h=>wPrev(S.text,h,k==='B'),n);break;
+    case'f':case't':case'F':case'T':case'r':S.pending=k;S.pcount=n;break;
+    case'g':S.pending='g';S.pcount=had?n:1;break;
+    case'm':S.pending='m';break;
+    case'Space':S.pending=' ';break;
+    case'A-.':if(S.lastFind){const[c,kd]=S.lastFind;mv(S,h=>findCh(S.text,h,c,kd,1),n);}break;
+    case'x':selLines(S,n,true);break;
+    case'X':selLines(S,1,false);break;
+    case'%':S.sels=[{a:0,h:len-1}];S.primary=0;break;
+    case';':S.sels=S.sels.map(s=>pt(s.h));norm(S);break;
+    case'A-;':S.sels=S.sels.map(s=>({a:s.h,h:s.a}));break;
+    case',':S.sels=[S.sels[S.primary]];S.primary=0;break;
+    case'v':S.mode=S.mode==='select'?'normal':'select';break;
+    case'Esc':S.mode='normal';break;
+    case'd':del(S,true);break;
+    case'A-d':del(S,false);break;
+    case'c':case'A-c':del(S,k==='c');enterInsert(S,S.sels.map(s=>s.h),false);break;
+    case'y':S.reg=S.sels.map(s=>{const[lo,hi]=rng(s);return t.slice(lo,hi+1);});S.mode='normal';break;
+    case'p':paste(S,false);break;
+    case'P':paste(S,true);break;
+    case'R':paste(S,false,true);break;
+    case'~':caseOp(S,x=>[...x].map(c=>c===c.toUpperCase()?c.toLowerCase():c.toUpperCase()).join(''));break;
+    case'`':caseOp(S,x=>x.toLowerCase());break;
+    case'A-`':caseOp(S,x=>x.toUpperCase());break;
+    case'i':snap(S);enterInsert(S,S.sels.map(s=>rng(s)[0]),false);break;
+    case'a':snap(S);enterInsert(S,S.sels.map(s=>Math.min(len-1,rng(s)[1]+1)),true);break;
+    case'I':snap(S);enterInsert(S,S.sels.map(s=>{let q=lineStart(t,rng(s)[0]);while(t[q]===' '||t[q]==='\t')q++;return q;}),false);break;
+    case'A':snap(S);enterInsert(S,S.sels.map(s=>lineEnd(t,rng(s)[1])),true);break;
+    case'o':case'O':{snap(S);const ind=p=>{const ls=lineStart(t,p);let q=ls;while(t[q]===' '||t[q]==='\t')q++;return t.slice(ls,q);};const adds=[];
+      const eds=S.sels.map(s=>{const[lo,hi]=rng(s);if(k==='o'){const le=lineEnd(t,hi),i=ind(hi);adds.push(1+i.length);return{from:le,to:le,text:'\n'+i};}
+        const ls=lineStart(t,lo),i=ind(lo);adds.push(i.length);return{from:ls,to:ls,text:i+'\n'};});
+      const pos=applyEdits(S,eds);enterInsert(S,pos.map((p,i)=>p+adds[i]),false);break;}
+    case'u':if(S.undo.length){S.redo.push({text:S.text,sels:S.sels,primary:S.primary});Object.assign(S,S.undo.pop());S.mode='normal';}break;
+    case'U':if(S.redo.length){S.undo.push({text:S.text,sels:S.sels,primary:S.primary});Object.assign(S,S.redo.pop());S.mode='normal';}break;
+    case'>':indent(S,1);break;
+    case'<':indent(S,-1);break;
+    case'C':copyDown(S);break;
+    case'J':joinLines(S);break;
+    case'C-c':toggleComment(S);break;
+    case'C-a':incr(S,n);break;
+    case'C-x':incr(S,-n);break;
+    case'A-s':splitLines(S);break;
+    case's':case'/':case':':S.prompt={kind:k,buf:''};break;
+    case'n':search(S,1);break;
+    case'N':search(S,-1);break;
+    case'*':{const[lo,hi]=rng(S.sels[S.primary]);let src=t.slice(lo,hi+1).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      if(/\w/.test(t[lo])&&!/\w/.test(t[lo-1]||' '))src='\\b'+src;if(/\w/.test(t[hi])&&!/\w/.test(t[hi+1]||' '))src+='\\b';S.search=src;break;}
+  }
+}
+function isSolved(S,d){
+  if(S.mode==='insert'||S.prompt||S.pending!==null||S.count)return false;
+  if(S.text!==d.goalText)return false;
+  if(d.goalSel){const a=S.sels.map(rng),b=d.goalSel;if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i][0]!==b[i][0]||a[i][1]!==b[i][1])return false;}
+  if(d.goalHead!==undefined&&S.sels[S.primary].h!==d.goalHead)return false;
+  if(d.goalIn){const hh=S.sels[S.primary].h;if(hh<d.goalIn[0]||hh>d.goalIn[1])return false;}
+  return true;
+}
+
+const STAGES=[
+{name:"Select, then act",drills:[
+ {id:"wd",task:"Delete the doubled word.",evil:"dw",start:"Fix the ⟦v⟧ery very long sentence",goal:"Fix the very long sentence",sol:"w d",why:"A motion selects what it crosses, and the verb comes second. You see what will be deleted before it goes.",mn:"w is word, d is delete: word, delete."},
+ {id:"d",task:"Delete the extra k.",evil:"x",start:"Mark⟦k⟧down is plain text",goal:"Markdown is plain text",sol:"d",why:"A bare cursor is a one-character selection, so d deletes it.",mn:"d always means delete the selection, whatever its size."},
+ {id:"ec",task:"Change draft to final.",evil:"cw",start:"Ship the ⟦d⟧raft on Friday",goal:"Ship the final on Friday",sol:"e c f i n a l Esc",why:"e stops on the last letter of the word. w would have taken the trailing space too. c deletes the selection and starts typing in its place.",mn:"e is end of word. c is change."},
+ {id:"vwwd",task:"Delete really quite.",evil:"d2w",start:"This is ⟦r⟧eally quite simple",goal:"This is simple",sol:"v w w d",why:"In normal mode each w starts a fresh selection. v pins the starting point so the motions add up.",mn:"v pins the anchor, like holding Shift while you arrow."},
+ {id:"semi",task:"Drop the selection and leave a bare cursor on the last letter.",start:"Remember to ⟦call back⟧",gsel:"Remember to call bac⟦k⟧",sol:";",why:"Esc does not clear a selection in normal mode. The semicolon collapses it onto the cursor.",mn:"A semicolon ends a statement. Here it ends the selection."},
+]},
+{name:"Getting text in",drills:[
+ {id:"A",task:"Add a period at the end of the line.",start:"The ⟦m⟧eeting moved to Thursday",goal:"The meeting moved to Thursday.",sol:"A . Esc",why:"A jumps to the end of the line and starts typing. Esc returns to normal mode.",mn:"Capital A: Append at the end of the line. Lowercase a: append after the selection."},
+ {id:"I",task:"Turn the line into a heading.",start:"Install note⟦s⟧",goal:"# Install notes",sol:"I # Space Esc",why:"I starts typing at the first character of the line, wherever the cursor was.",mn:"Capital I: Insert at the start of the line. Lowercase i: insert before the selection."},
+ {id:"i",task:"Insert very before good.",start:"a ⟦g⟧ood idea",goal:"a very good idea",sol:"i v e r y Space Esc",why:"i types before the selection, a types after it.",mn:"i is insert, a is append. Capitals do the same at the line's edges."},
+ {id:"o",task:"Add a tea item between milk and eggs.",start:"⟦-⟧ milk\n- eggs",goal:"- milk\n- tea\n- eggs",sol:"o - Space t e a Esc",why:"o makes a new line below and puts you in insert mode on it. O does the same above.",mn:"o opens a line. Lowercase below, capital above."},
+ {id:"uU",task:"Uppercase the heading text.",start:"## ⟦r⟧elease notes",goal:"## RELEASE NOTES",sol:"v g l A-`",why:"gl goes to the end of the line; with v it selects on the way. Alt-backtick uppercases the selection.",mn:"The backtick sits low on the keyboard: lowercase. Alt gives its opposite: uppercase."},
+]},
+{name:"Lines and paragraphs",drills:[
+ {id:"xd",task:"Delete the stale item.",evil:"dd",start:"- apples\n- ⟦s⟧tale item\n- pears",goal:"- apples\n- pears",sol:"x d",why:"x selects the whole line. Press it again to take the next line too.",mn:"x is extend to the whole line. Picture x-ing out a line."},
+ {id:"xxxd",task:"Delete the three old lines.",evil:"3dd",start:"keep\n⟦o⟧ld one\nold two\nold three\nkeep too",goal:"keep\nkeep too",sol:"x x x d",why:"3 x d is the same length. Either way the selection grows on screen before you commit.",mn:"Each x extends by one more line."},
+ {id:"xyp",task:"Duplicate the first checkbox line.",evil:"yyp",start:"⟦-⟧ [ ] weekly review\n- [ ] inbox zero",goal:"- [ ] weekly review\n- [ ] weekly review\n- [ ] inbox zero",sol:"x y p",why:"y copies the selection, p pastes after it. A copied line pastes as a line.",mn:"y is yank (copy). p is paste."},
+ {id:"xdp",task:"Move the first line below the second.",evil:"ddp",start:"⟦2⟧. second\n1. first\n3. third",goal:"1. first\n2. second\n3. third",sol:"x d p",why:"d cuts: it copies as it deletes, so p can put the line back down.",mn:"Cut and paste: x d, then p."},
+ {id:"xdkP",task:"Move two up one line, above three.",start:"- one\n- three\n- ⟦t⟧wo\n- four",goal:"- one\n- two\n- three\n- four",sol:"x d k P",why:"k moves up a line. Capital P pastes before the selection instead of after.",mn:"p pastes after, P pastes before. j is down, k is up."},
+ {id:"map",task:"Delete the draft paragraph and the blank line after it.",evil:"dap",start:"Intro line.\n\n⟦D⟧raft paragraph that\nruns two lines.\n\nOutro line.",goal:"Intro line.\n\nOutro line.",sol:"m a p d",why:"m is the match prefix. map selects around the paragraph, blank line included. mip selects just its lines.",mn:"m a p: match around paragraph. m i p: match inside paragraph."},
+ {id:"J",task:"Join the three hard-wrapped lines into one.",evil:"JJ",start:"⟦T⟧his sentence was\nhard-wrapped by\nsomeone.",goal:"This sentence was hard-wrapped by someone.",sol:"J J",why:"J joins the next line onto this one with a single space. Select several lines first and one J joins them all.",mn:"J is join."},
+ {id:"vgld",task:"Delete from the cursor to the end of the line.",evil:"D",start:"Call the vendor⟦ ⟧(maybe next week?)",goal:"Call the vendor",sol:"v g l d",why:"gl goes to the end of the line. Used bare it only moves the cursor, so v comes first.",mn:"g is goto. h and l are left and right, so gh is goto far left and gl is goto far right."},
+ {id:"ge",task:"Move to the last line of the file.",evil:"G",start:"⟦#⟧ Notes\nfirst\nsecond\nlast",ghead:"# Notes\nfirst\nsecond\n⟦l⟧ast",sol:"g e",why:"gg goes to the first line, ge to the last.",mn:"g e: goto end."},
+]},
+{name:"Markdown marks",drills:[
+ {id:"em",task:"Put the word in *emphasis*.",start:"This is ⟦i⟧mportant news",goal:"This is *important* news",sol:"e m s *",why:"Select the word, then ms and the character to wrap it in.",mn:"m s: match surround."},
+ {id:"bold",task:"Make the word **bold**.",start:"A ⟦b⟧old claim",goal:"A **bold** claim",sol:"e m s * m s *",why:"After ms the selection includes the new marks, so a second ms wraps them again.",mn:"m s twice: surround, then surround the result."},
+ {id:"code",task:"Wrap make install in backticks.",start:"Run ⟦m⟧ake install first",goal:"Run `make install` first",sol:"v e e m s `",why:"v then e e extends across two words without the trailing space.",mn:"v pins the anchor, e reaches each word end, m s surrounds."},
+ {id:"linktext",task:"Change the link text to guide.",evil:"ci[",start:"See [the old ⟦d⟧ocs](https://example.com) first",goal:"See [guide](https://example.com) first",sol:"m i [ c g u i d e Esc",why:"mi and a bracket selects everything inside the nearest pair, from anywhere within it.",mn:"m i [: match inside brackets."},
+ {id:"linkurl",task:"Change the link target to /new.",evil:"ci(",start:"See [docs](http://⟦o⟧ld.example) now",goal:"See [docs](/new) now",sol:"m i ( c / n e w Esc",why:"Same move with parentheses. In a Markdown link, square brackets hold the text and parentheses hold the target.",mn:"m i (: match inside parentheses."},
+ {id:"mr",task:"Switch the underscores to asterisks.",start:"An _un⟦d⟧erscored_ word",goal:"An *underscored* word",sol:"m r _ *",why:"mr takes the old mark, then the new one.",mn:"m r: match replace. Old mark, then new."},
+ {id:"md",task:"Remove the bold marks.",start:"Not **⟦t⟧hat** bold",goal:"Not that bold",sol:"m d * m d *",why:"md deletes the nearest surrounding pair of that character. Bold has two pairs.",mn:"m d: match delete."},
+]},
+{name:"Find and search",drills:[
+ {id:"fsp",task:"Delete the first word and the space after it.",start:"⟦H⟧owever, the build passed",goal:"the build passed",sol:"f Space d",why:"f selects from the cursor through the next occurrence of a character.",mn:"f is find: it lands on the character."},
+ {id:"t.",task:"Delete everything between Done and the period.",evil:"dt.",start:"Done⟦ ⟧by Tuesday, hopefully.",goal:"Done.",sol:"t . d",why:"t works like f but stops one short, so the period survives.",mn:"t is till: it stops just before the character."},
+ {id:"alt.",task:"Put the cursor on the third comma.",start:"⟦o⟧ne, two, three, four",ghead:"one, two, three⟦,⟧ four",sol:"f , A-. A-.",why:"Alt-. repeats the last f or t. A count works too: 3 f ,",mn:"Dot repeats the last insert. Alt-dot repeats the last motion."},
+ {id:"flip",task:"Grow the selection backwards to include quick.",start:"the quick ⟦brown⟧ fox",gsel:"the ⟦quick brown⟧ fox",sol:"A-; v b",why:"Alt-; moves the cursor to the other end of the selection. Then v and b extend backwards.",mn:"Semicolon collapses onto the cursor. Alt-semicolon moves the cursor to the other end. b is back a word."},
+ {id:"slash",task:"Jump to the Setup heading with a search.",start:"⟦#⟧ Notes\n\nSome text here.\n\n## Setup\n\nMore text.",gin:"# Notes\n\nSome text here.\n\n⟦## Setup⟧\n\nMore text.",sol:"/ S e t u p Enter",why:"/ searches forward. Enter jumps to the first match and selects it. n goes to the next match, N to the previous.",mn:"/ is search, n is next."},
+ {id:"*n",task:"Jump to the next TODO.",evil:"*",start:"⟦T⟧ODO ship it\nnotes\nTODO call back",gsel:"TODO ship it\nnotes\n⟦TODO⟧ call back",sol:"e * n",why:"* makes the selection the search pattern; n does the jumping. Select with e, because w would put the trailing space in the pattern.",mn:"Star the text you care about, then n for next."},
+]},
+{name:"Many cursors",drills:[
+ {id:"CCi",task:"Turn the three lines into a bullet list.",start:"⟦a⟧pples\npears\nplums",goal:"- apples\n- pears\n- plums",sol:"C C i - Space Esc",why:"C copies the cursor onto the next line. Whatever you type then happens at every cursor.",mn:"C is copy the cursor down a line."},
+ {id:"check",task:"Add an empty checkbox to each item.",start:"- ⟦c⟧all vendor\n- send notes\n- book room",goal:"- [ ] call vendor\n- [ ] send notes\n- [ ] book room",sol:"C C i [ Space ] Space Esc",why:"The cursors keep their column, so the checkbox lands after each dash.",mn:"C copies the cursor, column and all."},
+ {id:"quote",task:"Make both lines a blockquote.",start:"⟦Q⟧uoted line one\nquoted line two",goal:"> Quoted line one\n> quoted line two",sol:"C i > Space Esc",why:"Same pattern as bullets: one cursor per line, then type the prefix once.",mn:"C, then type once for every line."},
+ {id:"%s",task:"Rename acme to Initech everywhere.",evil:":%s/acme/Initech/g",start:"⟦T⟧he acme launch is close.\nacme ships Friday.\nAsk acme support.",goal:"The Initech launch is close.\nInitech ships Friday.\nAsk Initech support.",sol:"% s a c m e Enter c I n i t e c h Esc",why:"% selects the whole file, s keeps only the matches inside it, and c changes them all at once. This is Helix's find and replace.",mn:"% is 100% of the file. s is select within it."},
+ {id:"alts",task:"Wrap every line in backticks.",start:"⟦r⟧ed\ngreen\nblue",goal:"`red`\n`green`\n`blue`",sol:"% A-s m s `",why:"Alt-s splits one selection into a selection per line, without the line endings.",mn:"s selects within, Alt-s splits on lines. Both cut one big selection into many."},
+ {id:"gd",task:"Delete every line that contains TODO.",evil:":g/TODO/d",start:"⟦T⟧ODO fix a\ndone b\nTODO fix c",goal:"done b",sol:"% s T O D O Enter x d",why:"Select the matches, then x widens each one to its whole line.",mn:"Select the matches, extend each to its line, delete."},
+ {id:"comma",task:"Go back to a single cursor.",start:"- ⟦a⟧pples\n- ⟦p⟧ears\n- ⟦p⟧lums",gsel:"- apples\n- pears\n- ⟦p⟧lums",primary:2,sol:",",why:"Extra cursors survive Esc. The comma keeps only the primary one.",mn:"A comma separates items in a list. Press it to keep just one item."},
+]},
+{name:"YAML and config",drills:[
+ {id:"cmt",task:"Comment out the debug line.",evil:"gcc",start:"port: 8080\n⟦d⟧ebug: true\nhost: local",goal:"port: 8080\n# debug: true\nhost: local",sol:"C-c",why:"Ctrl-c toggles comments on every line the selection touches, using the file type's comment marker. Space c does the same.",mn:"c for comment."},
+ {id:"uncmt",task:"Uncomment the two cache lines.",start:"# ⟦c⟧ache: on\n# ttl: 60\nmode: fast",goal:"cache: on\nttl: 60\nmode: fast",sol:"C C-c",why:"The same key removes the marker when every selected line already has one.",mn:"Ctrl-c is a toggle: on if any line is bare, off if all are commented."},
+ {id:"value",task:"Change the port to 9090.",start:"⟦p⟧ort: 8080",goal:"port: 9090",sol:"g l b c 9 0 9 0 Esc",why:"gl jumps to the end of the line and b selects the word behind the cursor. A quick way to reach a value from anywhere on its line.",mn:"g l: goto far right. b: back a word. c: change."},
+ {id:"quoted",task:"Change the quoted value to api.",evil:"ci\"",start:"name: \"⟦o⟧ld-service\"",goal:"name: \"api\"",sol:"m i \" c a p i Esc",why:"mi works with quotes the same way it does with brackets.",mn:"m i \": match inside quotes."},
+ {id:"indent",task:"Nest host and port under server.",evil:">j",start:"server:\n⟦h⟧ost: local\nport: 80",goal:"server:\n  host: local\n  port: 80",sol:"C >",why:"> indents every line the selection touches by one level.",mn:"The bracket points the way the text moves."},
+ {id:"dedent",task:"Pull name back one level.",evil:"<<",start:"env:\n    ⟦n⟧ame: prod",goal:"env:\n  name: prod",sol:"<",why:"< removes one level of indentation. It acts on the current line with no selection needed.",mn:"The bracket points the way the text moves."},
+ {id:"incr",task:"Bump replicas to 3.",evil:"C-a",start:"replicas: ⟦2⟧",goal:"replicas: 3",sol:"C-a",why:"Ctrl-a adds one to the number under the cursor; Ctrl-x subtracts one.",mn:"a for add. x crosses one off."},
+ {id:"dupblock",task:"Duplicate the web entry.",start:"⟦-⟧ name: web\n  port: 80\n\nother: x",goal:"- name: web\n  port: 80\n- name: web\n  port: 80\n\nother: x",sol:"m i p y p",why:"A block of lines with no blank line in it is a paragraph, so mip selects a YAML entry.",mn:"m i p: match inside paragraph. Then yank, paste."},
+]},
+{name:"Chords by heart",recall:true,drills:[
+ {id:"r-redo",task:"Redo.",sol:"U",why:"u and U are the pair.",mn:"U is u with Shift: the opposite of undo."},
+ {id:"r-w",task:"Save the file.",sol:": w Enter",why:"The colon opens the command line. :w is short for :write.",mn:"w for write."},
+ {id:"r-file",task:"Open the file picker.",sol:"Space f",why:"Space is the menu key. It shows a list of what you can press next.",mn:"Space, then f for file."},
+ {id:"r-buf",task:"Switch between open files.",sol:"Space b",why:"Open files are called buffers.",mn:"Space, then b for buffer."},
+ {id:"r-grep",task:"Search across the whole project.",sol:"Space /",why:"Plain / searches the current file; Space / searches every file.",mn:"/ is search. Space widens it."},
+ {id:"r-clipy",task:"Copy the selection to the system clipboard.",sol:"Space y",why:"Plain y copies inside Helix only.",mn:"Space widens y to the system clipboard."},
+ {id:"r-clipp",task:"Paste from the system clipboard.",sol:"Space p",why:"Plain p pastes what you last yanked or deleted inside Helix.",mn:"Space widens p to the system clipboard."},
+ {id:"r-reflow",task:"Re-wrap the selected paragraph to the line width.",sol:": r e f l o w Enter",why:"Select the paragraph with mip first. :reflow hard-wraps it to the configured text width.",mn:"The text flows again into the width: reflow."},
+ {id:"r-gw",task:"Jump to any visible word by its two-letter label.",sol:"g w",why:"Labels appear over every word on screen; type one to jump there.",mn:"g w: goto word."},
+ {id:"r-gdot",task:"Jump back to where you last changed something.",sol:"g .",why:"Handy after scrolling away to look something up.",mn:"g is goto. The dot is the spot you last touched."},
+ {id:"r-para",task:"Jump to the next paragraph.",sol:"] p",why:"] moves to the next of something, [ to the previous.",mn:"The bracket points forward. p for paragraph."},
+ {id:"r-rec",task:"Start or stop recording a macro.",sol:"Q",why:"A macro replays a sequence of keys.",mn:"The capital does the heavy job (record). The lowercase does the quick one (replay)."},
+ {id:"r-play",task:"Replay the macro.",sol:"q",why:"Q records, q replays.",mn:"The capital does the heavy job (record). The lowercase does the quick one (replay)."},
+ {id:"r-altd",task:"Delete the selection without overwriting what you copied.",sol:"A-d",why:"Plain d cuts, replacing whatever you had yanked.",mn:"Alt is the no-side-effects modifier."},
+ {id:"r-pal",task:"Open the command palette.",sol:"Space ?",why:"It lists every command with its key, searchable by name.",mn:"Space, then a question mark: what can I do?"},
+]},
+];
+for(const[si,st]of STAGES.entries())for(const[di,d]of st.drills.entries()){
+  d.si=si;d.di=di;d.mn=d.mn||'';d.keys=d.sol.split(' ');d.par=d.keys.length;d.recall=!!st.recall;
+  if(!d.recall){const s=parse(d.start);d.text=s.text;d.sels=s.sels;
+    if(d.goal!==undefined)d.goalText=parse(d.goal).text;
+    if(d.gsel){const g=parse(d.gsel);d.goalText=g.text;d.goalSel=g.sels;}
+    if(d.ghead){const g=parse(d.ghead);d.goalText=g.text;d.goalHead=g.sels[0][1];}
+    if(d.gin){const g=parse(d.gin);d.goalText=g.text;d.goalIn=g.sels[0];}}
+}
+const TUTORIAL=[
+{name:"Select, then act",steps:[
+ {start:"Fix the ⟦v⟧ery very long sentence",keys:"w",
+  say:`<p>Helix edits the way you already do with a mouse: highlight something, then do something to it. The difference is that you highlight with keys.</p><p>Every movement key selects what it moves across. <kbd>w</kbd> moves to the next word.</p>`,
+  after:`<p><code>very</code> and its trailing space are selected. Nothing was deleted. The motion showed you what it covers.</p>`},
+ {keys:"w",say:`<p>Press it again and watch the left edge of the selection.</p>`,
+  after:`<p>The selection did not grow. It moved to the next word. In normal mode every motion <b>replaces</b> the selection with a fresh one.</p><p>So <kbd>w</kbd><kbd>w</kbd> does not mean "two words". It means "this word. No, the next one."</p>`},
+ {keys:"d",say:`<p>Now a verb. <kbd>d</kbd> is delete.</p>`,
+  after:`<p>Only the selected word went. A verb acts on whatever is selected when you press it. That is the whole grammar: <b>select, then act</b>.</p><p>If you know some vim: this is <kbd>dw</kbd> said backwards, and that reversal holds everywhere.</p>`},
+]},
+{name:"v holds the anchor",steps:[
+ {start:"This is ⟦r⟧eally quite simple",keys:"v",
+  say:`<p>A selection has two ends: the anchor, where it started, and the cursor. To cover more than one motion's worth, the anchor has to stay put.</p><p><kbd>v</kbd> switches to select mode, where motions <b>extend</b> instead of replace. It is the keyboard version of holding Shift.</p>`,
+  after:`<p>The status line says SEL. Nothing else changed.</p>`},
+ {keys:"w w",say:`<p>Same two motions as before.</p>`,after:`<p>Both words are covered, because the anchor stayed on the r.</p>`},
+ {keys:"d",say:`<p>And the verb.</p>`,after:`<p>Two words gone. The verb also returns you to normal mode.</p>`},
+ {start:"This is ⟦r⟧eally quite simple",keys:"2 w",
+  say:`<p>A number before a motion repeats it. But in normal mode each repeat replaces the last.</p>`,
+  after:`<p><kbd>2</kbd><kbd>w</kbd> selected only the second word, exactly like <kbd>w</kbd><kbd>w</kbd>. To cover both, pin the anchor first: <kbd>v</kbd><kbd>2</kbd><kbd>w</kbd>.</p>`},
+]},
+{name:"The cursor is a selection",steps:[
+ {start:"Mark⟦k⟧down is plain text",keys:"d",
+  say:`<p>There is no cursor apart from the selection. What looks like a cursor is a selection one character wide. So a verb with no motion acts on that one character.</p>`,
+  after:`<p>One letter deleted, no motion needed.</p>`},
+ {start:"Remember to ⟦c⟧all back",keys:"e",say:`<p>Selections stay until something replaces them, so you need a way back to one character. Select a word first. <kbd>e</kbd> goes to the end of the word.</p>`,
+  after:`<p><kbd>e</kbd> stops on the last letter, so there is no trailing space. Use <kbd>e</kbd> when you are about to replace a word and <kbd>w</kbd> when you are about to remove it.</p>`},
+ {keys:"Esc",say:`<p>Try Esc to cancel the selection.</p>`,after:`<p>Nothing happened. Esc leaves insert and select mode. It does not touch the selection.</p>`},
+ {keys:";",say:`<p>The key you want is the semicolon.</p>`,after:`<p><kbd>;</kbd> collapses the selection onto its cursor end. A semicolon ends a statement; here it ends the selection.</p>`},
+]},
+{name:"Typing text",steps:[
+ {start:"- milk\n- ⟦e⟧ggs",keys:"A",
+  say:`<p>So far every key has been a command. That is normal mode. To type text you enter insert mode, and there are six keys for it. They differ only in where the typing starts.</p><p><kbd>A</kbd> starts at the end of the line.</p>`,
+  after:`<p>The status line says INS and the cursor is a thin bar after the last letter.</p>`},
+ {keys:"Space x 2 Esc",say:`<p>Type something, then leave with Esc.</p>`,after:`<p>Back in normal mode. Everything typed in one visit to insert mode counts as a single change.</p>`},
+ {keys:"u",say:`<p><kbd>u</kbd> is undo.</p>`,after:`<p>The whole insert went in one step. <kbd>U</kbd>, the capital, is redo.</p>`},
+ {keys:"o",say:`<p><kbd>o</kbd> opens a new line below and starts typing on it.</p>`,after:`<p>A new line, already in insert mode.</p>`},
+ {keys:"- Space t e a Esc",say:`<p>Add the item.</p>`,
+  after:`<p>The six ways in, as three pairs. Lowercase works at the selection, the capital at the edge of the line:</p>
+<div class="tw"><table><tr><th>key</th><th>where typing starts</th></tr>
+<tr><td><kbd>i</kbd></td><td>insert before the selection</td></tr>
+<tr><td><kbd>a</kbd></td><td>append after the selection</td></tr>
+<tr><td><kbd>I</kbd></td><td>Insert at the start of the line</td></tr>
+<tr><td><kbd>A</kbd></td><td>Append at the end of the line</td></tr>
+<tr><td><kbd>o</kbd></td><td>open a line below</td></tr>
+<tr><td><kbd>O</kbd></td><td>Open a line above</td></tr></table></div>`},
+]},
+{name:"Lines, paragraphs, brackets",steps:[
+ {start:"- apples\n- ⟦s⟧tale item\n- pears\n- plums",keys:"x",say:`<p>Motions are one way to build a selection. <kbd>x</kbd> is another: it selects the current line.</p>`,
+  after:`<p>The whole line, including its line ending.</p>`},
+ {keys:"x",say:`<p><kbd>x</kbd> is the exception to "motions replace". Press it again.</p>`,
+  after:`<p>Two lines. Each <kbd>x</kbd> extends by one more, and <kbd>3</kbd><kbd>x</kbd> takes three at once.</p>`},
+ {start:"Intro line.\n\n⟦A⟧ paragraph that\nruns two lines.\n\nOutro line.",keys:"m i p",
+  say:`<p>The third way is to name the thing you are in. <kbd>m</kbd> is the match prefix. <kbd>m</kbd><kbd>i</kbd> means "match inside", and the next key says inside what: <kbd>p</kbd> for paragraph, <kbd>w</kbd> for word, or any bracket or quote character.</p>`,
+  after:`<p>The whole paragraph, from anywhere within it. <kbd>m</kbd><kbd>a</kbd><kbd>p</kbd>, "match around", would take the blank line after it as well.</p>`},
+ {start:"See [the old ⟦d⟧ocs](https://example.com) first",keys:"m i [",
+  say:`<p>The same prefix works on anything with an opening and closing mark. Here, a Markdown link's text.</p>`,
+  after:`<p>Everything between the brackets, selected and waiting for a verb.</p>`},
+ {keys:"c g u i d e Esc",say:`<p><kbd>c</kbd> is change: delete the selection and start typing.</p>`,after:`<p>"Match inside brackets, change." With <kbd>m</kbd><kbd>a</kbd><kbd>[</kbd> the brackets would have gone too.</p>`},
+]},
+{name:"Recipes",steps:[
+ {say:`<p>Every edit is built the same way:</p><p>1. Select the thing.<br>2. If one key covers it, use that. If it takes several motions, or a goto that only moves the cursor (<kbd>gl</kbd>, <kbd>ge</kbd>, <kbd>gg</kbd>, <kbd>j</kbd>, <kbd>k</kbd>), press <kbd>v</kbd> first.<br>3. Verb last: <kbd>d</kbd> delete, <kbd>c</kbd> change, <kbd>y</kbd> copy.</p>
+<div class="tw"><table><tr><th>to act on</th><th>select with</th><th>note</th></tr>
+<tr><td>one character</td><td>nothing</td><td>the cursor already is one</td></tr>
+<tr><td>a word and its space</td><td><kbd>w</kbd></td><td>for deleting</td></tr>
+<tr><td>a word, no space</td><td><kbd>e</kbd> or <kbd>miw</kbd></td><td>for changing; miw works mid-word</td></tr>
+<tr><td>two words</td><td><kbd>v</kbd><kbd>2w</kbd></td><td>two motions, so pin the anchor</td></tr>
+<tr><td>the line</td><td><kbd>x</kbd></td><td>again for more lines</td></tr>
+<tr><td>to end of line</td><td><kbd>v</kbd><kbd>gl</kbd></td><td>gl only moves</td></tr>
+<tr><td>up to a character</td><td><kbd>t</kbd> + character</td><td><kbd>f</kbd> includes the character</td></tr>
+<tr><td>the paragraph</td><td><kbd>mip</kbd></td><td><kbd>map</kbd> adds the blank line</td></tr>
+<tr><td>inside [ ] ( ) " "</td><td><kbd>mi</kbd> + the mark</td><td><kbd>ma</kbd> includes the marks</td></tr>
+<tr><td>the whole file</td><td><kbd>%</kbd></td><td></td></tr></table></div>`},
+ {start:"Call the vendor⟦ ⟧(maybe next week?)",keys:"g l",say:`<p>Step 2 in practice. <kbd>g</kbd><kbd>l</kbd> goes to the end of the line, but gotos do not select on the way. Try it bare.</p>`,
+  after:`<p>The cursor moved and the selection is still one character wide. A verb now would hit one character.</p>`},
+ {start:"Call the vendor⟦ ⟧(maybe next week?)",keys:"v g l d",say:`<p>Same line again. This time pin the anchor.</p>`,
+  after:`<p>With <kbd>v</kbd> holding the anchor, the goto became a selection.</p>`},
+]},
+{name:"Many cursors",steps:[
+ {start:"⟦a⟧pples\npears\nplums",keys:"C",
+  say:`<p>Verbs act on "the selection", and there can be more than one. Several selections means the same edit in several places, which is how Helix does bulk edits.</p><p><kbd>C</kbd> copies the cursor onto the next line.</p>`,
+  after:`<p>Two cursors. The status line shows 2 sel.</p>`},
+ {keys:"C",say:`<p>Once more.</p>`,after:`<p>Three cursors, one per line.</p>`},
+ {keys:"i - Space Esc",say:`<p>Now type as if there were one.</p>`,after:`<p>A bullet list. The same move makes checkboxes, blockquotes, or a comment column.</p>`},
+ {keys:",",say:`<p>The three cursors are still there, and Esc will not remove them.</p>`,after:`<p>The comma keeps only the primary selection. A comma separates items in a list; press it to keep just one.</p>`},
+ {start:"⟦T⟧he draft is late.\nSend the draft.\nArchive the draft.",keys:"%",say:`<p>The other way to get many selections is to start big and narrow down. <kbd>%</kbd> selects the whole file.</p>`,after:`<p>One selection covering everything.</p>`},
+ {keys:"s d r a f t Enter",say:`<p><kbd>s</kbd> keeps only the matches for a pattern inside the current selection.</p>`,after:`<p>Three selections, each a <code>draft</code>.</p>`},
+ {keys:"c r e p o r t Esc",say:`<p>Any verb now runs three times.</p>`,after:`<p>That is find and replace in Helix: select everything, narrow to the matches, change. To limit it to one paragraph, start with <kbd>mip</kbd> instead of <kbd>%</kbd>.</p>`},
+]},
+{name:"Names for the keys",steps:[
+ {say:`<p>Most Helix keys are the first letter of a word. Four prefixes carry most of the load, and each has one meaning.</p>
+<div class="tw"><table><tr><th>prefix</th><th>say</th><th>then</th></tr>
+<tr><td><kbd>m</kbd></td><td>match</td><td><kbd>i</kbd> inside · <kbd>a</kbd> around · <kbd>s</kbd> surround · <kbd>r</kbd> replace · <kbd>d</kbd> delete</td></tr>
+<tr><td><kbd>g</kbd></td><td>goto</td><td><kbd>h</kbd> far left · <kbd>l</kbd> far right · <kbd>s</kbd> start of text · <kbd>g</kbd> top · <kbd>e</kbd> end · <kbd>w</kbd> word · <kbd>.</kbd> last change</td></tr>
+<tr><td><kbd>Space</kbd></td><td>outside the text</td><td><kbd>f</kbd> file · <kbd>b</kbd> buffer · <kbd>/</kbd> project search · <kbd>y</kbd> <kbd>p</kbd> system clipboard · <kbd>?</kbd> command palette</td></tr>
+<tr><td><kbd>Alt</kbd></td><td>the sibling</td><td><kbd>d</kbd> delete, keep clipboard · <kbd>;</kbd> flip ends · <kbd>.</kbd> repeat motion · <kbd>&#96;</kbd> uppercase · <kbd>s</kbd> split on lines</td></tr></table></div>
+<p style="margin-top:12px">Single keys worth a name:</p>
+<div class="tw"><table><tr><th>key</th><th>say</th></tr>
+<tr><td><kbd>w</kbd> <kbd>e</kbd> <kbd>b</kbd></td><td>word, end of word, back a word</td></tr>
+<tr><td><kbd>f</kbd> <kbd>t</kbd></td><td>find a character, till just before it</td></tr>
+<tr><td><kbd>x</kbd></td><td>extend to the line (x it out)</td></tr>
+<tr><td><kbd>v</kbd></td><td>pin the anchor, like holding Shift</td></tr>
+<tr><td><kbd>;</kbd></td><td>a semicolon ends the selection</td></tr>
+<tr><td><kbd>,</kbd></td><td>a comma separates a list: keep one item</td></tr>
+<tr><td><kbd>%</kbd></td><td>100% of the file</td></tr>
+<tr><td><kbd>s</kbd></td><td>select within</td></tr>
+<tr><td><kbd>C</kbd></td><td>copy the cursor down</td></tr>
+<tr><td><kbd>d</kbd> <kbd>c</kbd> <kbd>y</kbd> <kbd>p</kbd></td><td>delete, change, yank (copy), paste</td></tr>
+<tr><td><kbd>J</kbd></td><td>join lines</td></tr>
+<tr><td><kbd>u</kbd> <kbd>U</kbd></td><td>undo, and shifted: undo the undo</td></tr>
+<tr><td><kbd>&gt;</kbd> <kbd>&lt;</kbd></td><td>the bracket points the way the text moves</td></tr>
+<tr><td><kbd>Ctrl-c</kbd></td><td>comment</td></tr>
+<tr><td><kbd>Ctrl-a</kbd> <kbd>Ctrl-x</kbd></td><td>add one, cross one off</td></tr></table></div>`},
+]},
+];
+/*ENGINE-END*/
+
+const ALL=STAGES.flatMap(s=>s.drills);
+const KEY='helix-reps-v2';
+const store={data:{stars:{},sprint:0,all:false},
+  load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r)Object.assign(this.data,r);}catch(e){}},
+  save(){try{localStorage.setItem(KEY,JSON.stringify(this.data));}catch(e){}}};
+store.load();
+
+const $=id=>document.getElementById(id);
+const card=$('card');
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const show=k=>k==='Enter'?'⏎':k==='Backspace'?'⌫':k.startsWith('A-')?'Alt-'+k.slice(2):k.startsWith('C-')?'Ctrl-'+k.slice(2):k;
+const kbds=ks=>ks.map(k=>'<kbd>'+esc(show(k))+'</kbd>').join(' ');
+const starStr=n=>'★'.repeat(n)+'☆'.repeat(3-n);
+
+const DOC='https://docs.helix-editor.com/';
+const DOCS={mov:['Keymap: Movement','keymap.html#movement'],chg:['Keymap: Changes','keymap.html#changes'],sel:['Keymap: Selection manipulation','keymap.html#selection-manipulation'],
+ search:['Keymap: Search','keymap.html#search'],goto:['Keymap: Goto mode','keymap.html#goto-mode'],match:['Keymap: Match mode','keymap.html#match-mode'],space:['Keymap: Space mode','keymap.html#space-mode'],
+ unimp:['Keymap: Unimpaired','keymap.html#unimpaired'],selmode:['Keymap: Select / extend mode','keymap.html#select--extend-mode'],surround:['Surround','surround.html'],textobj:['Textobjects','textobjects.html'],
+ cmds:['Commands','commands.html'],keymap:['Keymap','keymap.html']};
+const DRILLDOC={wd:'mov',d:'chg',ec:'chg',vwwd:'selmode',semi:'sel',A:'chg',I:'chg',i:'chg',o:'chg',uU:'chg',xd:'sel',xxxd:'sel',xyp:'chg',xdp:'chg',xdkP:'chg',map:'textobj',J:'sel',vgld:'goto',ge:'goto',
+ em:'surround',bold:'surround',code:'surround',mr:'surround',md:'surround',linktext:'textobj',linkurl:'textobj','fsp':'mov','t.':'mov','alt.':'mov',flip:'sel',slash:'search','*n':'search',
+ CCi:'sel',check:'sel',quote:'sel','%s':'sel',alts:'sel',gd:'sel',comma:'sel',cmt:'sel',uncmt:'sel',value:'goto',quoted:'textobj',indent:'chg',dedent:'chg',incr:'chg',dupblock:'textobj',
+ 'r-redo':'chg','r-w':'cmds','r-file':'space','r-buf':'space','r-grep':'space','r-clipy':'space','r-clipp':'space','r-reflow':'cmds','r-gw':'goto','r-gdot':'goto','r-para':'unimp','r-rec':'chg','r-play':'chg','r-altd':'chg','r-pal':'space'};
+const TUTDOC=['mov','selmode','sel','chg','textobj','keymap','sel','keymap'];
+const docLink=k=>{const d=DOCS[k]||DOCS.keymap;return'<a class="link doc" href="'+DOC+d[1]+'" target="_blank" rel="noopener">Helix docs: '+esc(d[0])+' ↗</a>';};
+const app={mode:'ladder',d:null,S:null,solved:false,peeked:false,tape:[],typed:[],misses:0,lastStars:0,flash:'',wipeArmed:false,
+  sprint:{on:false,over:false,left:60,score:0,streak:0,count:0,timer:null,end:0}};
+
+function unlocked(i){if(i===0||store.data.all)return true;if(!unlocked(i-1))return false;const p=STAGES[i-1].drills;return p.filter(d=>store.data.stars[d.id]).length>=Math.ceil(p.length*.6);}
+function load(d){app.d=d;app.solved=false;app.peeked=false;app.tape=[];app.typed=[];app.misses=0;
+  app.S=d.recall?null:newState(d.text,d.sels,d.primary);}
+function firstOpen(si){const ds=STAGES[si].drills;return ds.find(d=>!store.data.stars[d.id])||ds[0];}
+function nextDrill(){const d=app.d,ds=STAGES[d.si].drills;
+  if(d.di+1<ds.length)return load(ds[d.di+1]);
+  if(d.si+1<STAGES.length&&unlocked(d.si+1))return load(STAGES[d.si+1].drills[0]);
+  load(firstOpen(d.si));}
+function pool(){return ALL.filter(d=>unlocked(d.si));}
+function sprintPick(){const p=pool().filter(d=>d!==app.d);load(p[Math.floor(Math.random()*p.length)]||ALL[0]);}
+function sprintReset(){const s=app.sprint;clearInterval(s.timer);Object.assign(s,{on:false,over:false,left:60,score:0,streak:0,count:0,timer:null});app.flash='';sprintPick();}
+function sprintStart(){const s=app.sprint;s.on=true;s.end=Date.now()+60000;
+  s.timer=setInterval(()=>{s.left=Math.max(0,Math.ceil((s.end-Date.now())/1000));
+    if(s.left<=0){clearInterval(s.timer);s.on=false;s.over=true;if(s.score>store.data.sprint){store.data.sprint=s.score;store.save();}}
+    render();},250);}
+
+function complete(){const d=app.d;let st;
+  if(d.recall)st=app.misses===0?3:app.misses===1?2:1;
+  else{const k=app.S.keys;st=k<=d.par?3:k<=Math.ceil(d.par*1.5)?2:1;}
+  if(app.peeked)st=Math.min(st,2);
+  app.lastStars=st;
+  if(app.mode==='sprint'){const s=app.sprint;const gain=(st===3?150:100)+10*s.streak;s.score+=gain;s.streak++;s.count++;
+    app.flash='+'+gain+'  '+d.keys.map(show).join(' ');sprintPick();return;}
+  app.solved=true;
+  if(st>(store.data.stars[d.id]||0)){store.data.stars[d.id]=st;store.save();}
+}
+app.tut={li:0,si:0,idx:0,S:null,miss:false,end:false};
+function tutLoad(li,si){const T=app.tut;T.li=li;T.si=si;T.idx=0;T.miss=false;T.end=false;const st=TUTORIAL[li].steps[si];
+  if(st.start){const p=parse(st.start);T.S=newState(p.text,p.sels);}else if(si===0)T.S=null;}
+function tutKey(k){const T=app.tut,L=TUTORIAL[T.li],st=L.steps[T.si],keys=st.keys?st.keys.split(' '):[];
+  if(T.end){if(k==='Enter'){app.mode='ladder';load(firstOpen(0));}return;}
+  if(k==='Tab'){tutLoad(T.li,0);return;}
+  if(T.idx<keys.length){if(k===keys[T.idx]){feed(T.S,k);T.idx++;T.miss=false;}else T.miss=true;return;}
+  if(k!=='Enter')return;
+  if(T.si+1<L.steps.length)return tutLoad(T.li,T.si+1);
+  store.data.tut=store.data.tut||{};store.data.tut[T.li]=true;store.save();
+  if(T.li+1<TUTORIAL.length)tutLoad(T.li+1,0);else T.end=true;}
+function tutNav(){const done=store.data.tut||{};
+  return TUTORIAL.map((L,li)=>'<div class="stage'+(app.tut.li===li&&!app.tut.end?' on':'')+'"><button class="stage-h" data-l="'+li+'"><span>'+(li+1)+'. '+esc(L.name)+'</span><span class="ok">'+(done[li]?'✓':'')+'</span></button></div>').join('');}
+function renderTut(){const T=app.tut,hint='<div class="focus-hint">Click here to focus, then type.</div>';
+  if(T.end){card.innerHTML='<div class="eyebrow"><span>Tutorial complete</span></div><h2 class="task">Select, then act. When one motion is not enough, hold the anchor with v.</h2><div class="next">Press <kbd>Enter</kbd> to start the Ladder.</div>'+hint;return;}
+  const L=TUTORIAL[T.li],st=L.steps[T.si],keys=st.keys?st.keys.split(' '):[],done=T.idx>=keys.length,S=T.S;
+  let h='<div class="eyebrow"><span>Lesson '+(T.li+1)+' of '+TUTORIAL.length+' · '+esc(L.name)+'</span><span>step '+(T.si+1)+' of '+L.steps.length+'</span></div>';
+  h+='<div class="say">'+st.say+'</div>';
+  const tdoc='<div class="next">'+docLink(TUTDOC[T.li])+'</div>';
+  if(S)h+='<section class="pane"><div class="buf">'+bufHTML(S.text,S.sels,S.primary,S.mode)+'</div><div class="statusline"><span class="modetag">'+({normal:'NOR',insert:'INS',select:'SEL'}[S.mode])+'</span><span class="pend">'+esc(pendStr(S))+'</span><span class="right">'+S.sels.length+' sel</span></div></section>';
+  if(keys.length)h+='<div class="prompt"><span class="lab">'+(done?'Pressed':'Press')+'</span>'+keys.map((k,i)=>'<kbd class="'+(i<T.idx?'hit':i===T.idx?'nextk':'')+'">'+esc(show(k))+'</kbd>').join('')+(T.miss?'<span class="misskey">Not that key.</span>':'')+'</div>';
+  if(done){if(st.after)h+='<div class="say after">'+st.after+'</div>';h+='<div class="next"><kbd>Enter</kbd> continue · <kbd>Tab</kbd> restart lesson</div>';}
+  card.innerHTML=h+tdoc+hint;}
+function onKey(k){
+  if(app.mode==='tutorial'){tutKey(k);return;}
+  const sp=app.sprint;
+  if(app.mode==='sprint'&&sp.over){if(k==='Enter')sprintReset();return;}
+  if(k==='Tab'){if(app.mode==='sprint'){sp.streak=0;app.flash='skipped  '+app.d.keys.map(show).join(' ');sprintPick();}else load(app.d);return;}
+  if(app.solved){if(k==='Enter')nextDrill();return;}
+  if(app.mode==='sprint'&&!sp.on)sprintStart();
+  const d=app.d;
+  if(d.recall){app.typed.push(k);const i=app.typed.length-1;
+    if(d.keys[i]!==k){app.misses++;app.typed=[];app.missFlash=true;if(app.mode==='sprint')sp.streak=0;}
+    else if(app.typed.length===d.keys.length)complete();
+    return;}
+  app.tape.push(k);feed(app.S,k);
+  if(isSolved(app.S,d))complete();
+}
+
+function bufHTML(text,sels,primary,mode){const cls=new Array(text.length).fill('');
+  sels.forEach((s,i)=>{if(mode==='insert'){cls[s.h]+=' ibar';return;}
+    const[lo,hi]=rng(s);for(let j=lo;j<=hi;j++)cls[j]+=' sel';cls[s.h]+=i===primary?' cur':' cur2';});
+  let out='<div class="ln">';
+  for(let i=0;i<text.length;i++){const c=text[i],k=cls[i].trim();
+    if(c==='\n'){out+='<span class="'+k+'"> </span></div>';if(i<text.length-1)out+='<div class="ln">';}
+    else out+=k?'<span class="'+k+'">'+esc(c)+'</span>':esc(c);}
+  return out;}
+function goalHTML(d){
+  if(d.goalIn)return bufHTML(d.goalText,[{a:d.goalIn[0],h:d.goalIn[1]}],-1,'normal');
+  if(d.goalSel)return bufHTML(d.goalText,d.goalSel.map(([a,h])=>({a,h})),0,'normal');
+  if(d.goalHead!==undefined)return bufHTML(d.goalText,[pt(d.goalHead)],0,'normal');
+  return bufHTML(d.goalText,[],0,'normal');}
+function pendStr(S){if(S.prompt)return({s:'select:','/':'search:',':':':'}[S.prompt.kind])+S.prompt.buf+'▏';
+  let p=S.pending;if(p===null)return S.count;if(p===' ')p='Space';p=p.replace('mr:','mr');return S.count+p;}
+
+function renderStages(){
+  $('stages').innerHTML=app.mode==='tutorial'?tutNav():STAGES.map((st,si)=>{const open=unlocked(si),done=st.drills.filter(d=>store.data.stars[d.id]).length;
+    const on=app.mode==='ladder'&&app.d.si===si;
+    const dots=st.drills.map(d=>{const n=store.data.stars[d.id]||0;return'<button class="dot s'+n+(app.mode==='ladder'&&app.d===d?' here':'')+'" data-d="'+si+','+d.di+'" title="'+esc(d.task)+'" aria-label="Drill '+(d.di+1)+', '+n+' stars"'+(open?'':' disabled')+'>'+(n?n:'')+'</button>';}).join('');
+    return'<div class="stage'+(on?' on':'')+(open?'':' locked')+'"><button class="stage-h" data-s="'+si+'"'+(open?'':' disabled')+'><span>'+(si+1)+'. '+esc(st.name)+'</span><span>'+done+'/'+st.drills.length+'</span></button><div class="dots">'+dots+'</div>'+(open?'':'<div class="lockmsg">Clear 60% of the previous stage</div>')+'</div>';}).join('');
+  const total=ALL.length*3,got=ALL.reduce((a,d)=>a+(store.data.stars[d.id]||0),0),f=got/total;
+  $('rank').innerHTML='<b>'+(f<.25?'Hunting for keys':f<.5?'Selects before acting':f<.8?'Thinks in selections':'hx native')+'</b>';
+  $('starcount').textContent='★ '+got+'/'+total;
+  $('unlock').textContent=store.data.all?'Re-lock stages':'Unlock all stages';
+  $('wipe').textContent=app.wipeArmed?'Click again to confirm':'Reset progress';
+}
+function render(){
+  const d=app.d,S=app.S,sp=app.sprint,sprint=app.mode==='sprint';
+  $('mTut').setAttribute('aria-pressed',app.mode==='tutorial');$('mLadder').setAttribute('aria-pressed',app.mode==='ladder');$('mSprint').setAttribute('aria-pressed',sprint);
+  renderStages();
+  if(app.mode==='tutorial'){renderTut();return;}
+  if(sprint&&sp.over){card.innerHTML='<div class="eyebrow"><span>Sprint over</span><span>best '+Math.max(store.data.sprint,sp.score)+'</span></div><div class="big">'+sp.score+'</div><p class="task">'+sp.count+' drills in 60 seconds.</p><div class="next">Press <kbd>Enter</kbd> to go again.</div><div class="focus-hint">Click here to focus, then type.</div>';return;}
+  const st=STAGES[d.si];let h='';
+  if(sprint)h+='<div class="eyebrow"><span>'+(sp.on?'':'Starts on your first key · ')+esc(st.name)+'</span><span>'+sp.left+'s · score '+sp.score+' · streak '+sp.streak+' · best '+store.data.sprint+'</span></div>';
+  else h+='<div class="eyebrow"><span>Stage '+(d.si+1)+' · '+esc(st.name)+'</span><span>drill '+(d.di+1)+' of '+st.drills.length+(store.data.stars[d.id]?' · best '+starStr(store.data.stars[d.id]):'')+'</span></div>';
+  h+='<h2 class="task">'+esc(d.task)+'</h2>';
+  h+='<div class="chips">'+(d.evil?'<span class="chip vim"><span class="lab">in vim</span><kbd>'+esc(d.evil)+'</kbd></span>':'');
+  if(app.peeked||app.solved)h+='<span class="chip hx"><span class="lab">hx</span>'+kbds(d.keys)+'</span>';
+  else if(!sprint)h+='<button class="link" id="peek">Show hx keys (caps this drill at ★★)</button>';
+  h+=docLink(DRILLDOC[d.id])+'</div>';
+  if(app.peeked&&!app.solved&&d.mn)h+='<p class="mn"><b>Mnemonic</b> '+esc(d.mn)+'</p>';
+  if(d.recall){
+    h+='<div class="recall'+(app.missFlash?' miss':'')+'">'+(app.solved?kbds(d.keys):app.typed.length?kbds(app.typed):'<span class="none">'+(app.missFlash?'Not that. Try again.':'Type the chord.')+'</span>')+'</div>';
+    app.missFlash=false;
+  }else{
+    const over=S.keys>d.par;
+    h+='<div class="panes"><section class="pane"><h3>Buffer</h3><div class="buf">'+bufHTML(S.text,S.sels,S.primary,S.mode)+'</div>'
+     +'<div class="statusline"><span class="modetag">'+({normal:'NOR',insert:'INS',select:'SEL'}[S.mode])+'</span><span class="pend">'+esc(pendStr(S))+'</span><span class="right">'+S.sels.length+' sel · <span class="'+(over?'over':'')+'">'+S.keys+' keys</span> · par '+d.par+'</span></div></section>'
+     +'<section class="pane"><h3>Target</h3><div class="buf goal">'+goalHTML(d)+'</div></section></div>';
+    h+='<div class="tape">'+(app.tape.length?kbds(app.tape.slice(-28)):'<span class="none">Keys you press show up here.</span>')+'</div>';
+  }
+  if(sprint)h+='<div class="flash">'+esc(app.flash)+'</div>';
+  if(app.solved){const k=d.recall?null:S.keys;
+    h+='<div class="result"><div class="head"><span class="stars">'+starStr(app.lastStars)+'</span><span>'+(d.recall?(app.misses?app.misses+' miss'+(app.misses>1?'es':''):'first try'):k+' keys, par '+d.par+(k<d.par?' (under par)':''))+'</span></div><p class="why">'+esc(d.why)+'</p>'+(d.mn?'<p class="mn"><b>Mnemonic</b> '+esc(d.mn)+'</p>':'')+'<div class="next"><kbd>Enter</kbd> next · <kbd>Tab</kbd> retry</div></div>';}
+  h+='<div class="focus-hint">Click here to focus, then type.</div>';
+  card.innerHTML=h;
+}
+
+const CODE={Semicolon:';:',Period:'.>',Comma:',<',Backquote:'`~',Minus:'-_',Equal:'=+',Slash:'/?',Quote:'\'"',BracketLeft:'[{',BracketRight:']}',Backslash:'\\|'};
+function token(e){
+  if(e.metaKey)return null;const k=e.key;
+  if(e.ctrlKey){if(k==='[')return'Esc';if(k.length===1&&!'rtwnl'.includes(k.toLowerCase()))return'C-'+k.toLowerCase();return null;}
+  if(e.altKey){const c=e.code;let ch=null;
+    if(/^Key[A-Z]$/.test(c))ch=e.shiftKey?c[3]:c[3].toLowerCase();
+    else if(/^Digit\d$/.test(c))ch=e.shiftKey?')!@#$%^&*('[+c[5]]:c[5];
+    else if(CODE[c])ch=CODE[c][e.shiftKey?1:0];
+    return ch?'A-'+ch:null;}
+  if(k==='Escape')return'Esc';if(k==='Enter'||k==='Backspace')return k;
+  if(k==='Tab')return e.shiftKey?null:'Tab';
+  if(k===' ')return'Space';if(k.length===1)return k;return null;
+}
+card.addEventListener('keydown',e=>{const k=token(e);if(!k)return;e.preventDefault();onKey(k);render();});
+card.addEventListener('click',e=>{if(e.target.id==='peek'){app.peeked=true;render();}card.focus({preventScroll:true});});
+$('mTut').addEventListener('click',()=>{clearInterval(app.sprint.timer);app.mode='tutorial';const done=store.data.tut||{};let li=TUTORIAL.findIndex((L,i)=>!done[i]);tutLoad(li<0?0:li,0);render();card.focus({preventScroll:true});});
+$('stages').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.l!==undefined){tutLoad(+b.dataset.l,0);render();card.focus({preventScroll:true});return;}
+  if(app.mode==='sprint'){clearInterval(app.sprint.timer);app.mode='ladder';}
+  if(b.dataset.d){const[si,di]=b.dataset.d.split(',').map(Number);load(STAGES[si].drills[di]);}else load(firstOpen(+b.dataset.s));
+  render();card.focus({preventScroll:true});});
+$('mLadder').addEventListener('click',()=>{clearInterval(app.sprint.timer);app.mode='ladder';load(firstOpen(app.d.si));render();card.focus({preventScroll:true});});
+$('mSprint').addEventListener('click',()=>{app.mode='sprint';sprintReset();render();card.focus({preventScroll:true});});
+$('unlock').addEventListener('click',()=>{store.data.all=!store.data.all;store.save();render();});
+$('wipe').addEventListener('click',()=>{if(!app.wipeArmed){app.wipeArmed=true;render();return;}
+  app.wipeArmed=false;store.data={stars:{},sprint:0,all:false};store.save();load(ALL[0]);render();});
+
+(function start(){let si=0;for(let i=0;i<STAGES.length;i++)if(unlocked(i)&&STAGES[i].drills.some(d=>!store.data.stars[d.id])){si=i;break;}
+  load(firstOpen(si));render();card.focus({preventScroll:true});})();
+</script>
+</body>
+</html>
