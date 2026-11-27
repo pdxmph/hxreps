@@ -24,11 +24,11 @@ If you set a Content-Security-Policy, it needs:
 
 - Progress (stars, sprint best, tutorial ticks) is kept in the visitor's browser under the `localStorage` key `helix-reps-v2`. Nothing is sent anywhere. No cookies.
 
-## Things still to decide or add
+## Done
 
-- Domain name.
-- A favicon and an Open Graph image (none included). `og:title` and `og:description` are set; add `og:url` and `og:image` once the domain exists.
-- A licence or author line in the footer, if wanted. The footer currently says the bindings follow the Helix docs and the page is not affiliated with the Helix project.
+- Domain: hxreps.puddingtime.net.
+- Favicon (`public/favicon.svg`, `public/apple-touch-icon.png`) and Open Graph image (`public/og.png`, 1200×630); `og:url` and `og:image` set.
+- Footer credits Mike Hall, MIT licence (`LICENSE`).
 
 ## Editing later
 
