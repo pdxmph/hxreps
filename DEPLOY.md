@@ -40,3 +40,7 @@ If you set a Content-Security-Policy, it needs:
 
 - Needs a hardware keyboard. It renders on a phone but cannot be played there.
 - The emulator covers only the keys the drills use. Indent width is fixed at two spaces and comment toggling always uses `# `.
+
+## Deploys
+
+Workers Builds watches `pdxmph/hxreps` on `main` and runs `npx wrangler deploy` on every push (trigger "hxreps main"). `wrangler deploy` from this folder also works.
