@@ -4,7 +4,7 @@ Live at https://hxreps.puddingtime.net (Cloudflare Worker `hxreps`, static asset
 
 ## What this is
 
-`public/index.html` is the whole site. One self-contained file: markup, CSS and JavaScript inline. No build step, no backend, no framework, no analytics.
+`public/index.html` is the whole site. One self-contained file: markup, CSS and JavaScript inline. No build step, no backend, no framework. No analytics script in the page (see Storage and privacy).
 
 ## Requirements
 
@@ -22,7 +22,8 @@ If you set a Content-Security-Policy, it needs:
 
 ## Storage and privacy
 
-- Progress (stars, sprint best, tutorial ticks) is kept in the visitor's browser under the `localStorage` key `helix-reps-v2`. Nothing is sent anywhere. No cookies.
+- Progress (stars, sprint best, tutorial ticks) is kept in the visitor's browser under the `localStorage` key `helix-reps-v2`. The page itself sends nothing anywhere. No cookies.
+- The site is registered with NeatStats. `<head>` carries its domain verification tag (`neatstats_verification`); keep it, or NeatStats loses verification. NeatStats tracks without any script in the page, so the CSP above needs no NeatStats entry. If a NeatStats script is ever added, add its domains to `script-src` and `connect-src` in `public/_headers`.
 
 ## Done
 
