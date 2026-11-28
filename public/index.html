@@ -127,8 +127,11 @@ h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em}
 .prompt .misskey{color:var(--evil);font-size:13px;margin-left:6px}
 .stage .ok{color:var(--ok)}
 .big{font-size:40px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
-footer{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+footer{color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:10px}
+footer .frow{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
 footer .sp{margin-left:auto;display:flex;gap:14px}
+footer .fine{font-size:12px;border-top:1px solid var(--line);padding-top:10px}
+@media (max-width:600px){footer .sp{margin-left:0}}
 @media (prefers-reduced-motion:no-preference){.result{animation:pop .18s ease-out}@keyframes pop{from{transform:translateY(4px);opacity:.4}to{transform:none;opacity:1}}}
 </style>
 
@@ -154,8 +157,9 @@ footer .sp{margin-left:auto;display:flex;gap:14px}
     </div>
   </div>
   <footer>
-    <span><kbd>Tab</kbd> retry / skip</span><span><kbd>Enter</kbd> next, once solved</span><span><kbd>Ctrl-[</kbd> also works as Esc</span><span>Bindings follow the default keymap in the <a class="link" href="https://docs.helix-editor.com/keymap.html" target="_blank" rel="noopener">Helix docs</a>. Not affiliated with the Helix project.</span><span>© 2026 Mike Hall · MIT licence · <a class="link" href="https://github.com/pdxmph/hxreps" target="_blank" rel="noopener">Source</a></span>
-    <span class="sp"><button class="link" id="unlock"></button><button class="link" id="wipe">Reset progress</button></span>
+    <div class="frow"><span><kbd>Tab</kbd> retry / skip</span><span><kbd>Enter</kbd> next, once solved</span><span><kbd>Ctrl-[</kbd> also works as Esc</span>
+    <span class="sp"><button class="link" id="unlock"></button><button class="link" id="wipe">Reset progress</button></span></div>
+    <div class="frow fine"><span>Bindings follow the default keymap in the <a class="link" href="https://docs.helix-editor.com/keymap.html" target="_blank" rel="noopener">Helix docs</a>. Not affiliated with the Helix project.</span><span>© 2026 Mike Hall · MIT licence · <a class="link" href="https://github.com/pdxmph/hxreps" target="_blank" rel="noopener">Source</a></span></div>
   </footer>
 </div>
 
