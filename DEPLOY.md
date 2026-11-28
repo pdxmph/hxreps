@@ -44,3 +44,7 @@ If you set a Content-Security-Policy, it needs:
 ## Deploys
 
 Workers Builds watches `pdxmph/hxreps` on `main` and runs `npx wrangler deploy` on every push (trigger "hxreps main"). `wrangler deploy` from this folder also works.
+
+## Tests
+
+`tests/footer-layout.mjs` checks the footer's two-row layout at 1280, 1000 and 390px in headless Chromium. It needs Playwright; point `PLAYWRIGHT` at its `index.mjs` and `CHROME` at a Chromium binary if they aren't resolvable. `tests/` is outside `public/`, so it is never deployed.
